@@ -4,3 +4,7 @@ pandas
 pandas_datareader
 plotly
 scikit-learn
+ta
+plotly
+datetime
+dateutil
