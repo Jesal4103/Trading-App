@@ -1,61 +1,50 @@
 import streamlit as st
 import pandas as pd
-from pages.utils.model_train import (
-    get_data, get_rolling_mean, get_differencing_order,
-    fit_model, evaluate_model, get_forecast
-)
-from pages.utils.plotly_figure import plotly_table, Moving_average_forecast
+from pages.utils.model_train import get_data
+from pages.utils.model_train import stationary_check
+from pages.utils.model_train import get_rolling_mean
+from pages.utils.model_train import get_differencing_order
+from pages.utils.model_train import fit_model
+from pages.utils.model_train import evaluate_model
+from pages.utils.model_train import scaling
+from pages.utils.model_train import get_forecast
+from pages.utils.model_train import inverse_scaling
+from pages.utils.plotly_figure import plotly_table
+from pages.utils.plotly_figure import Moving_average_forecast
 
 st.set_page_config(
     page_title="Stock Prediction",
-    page_icon="📉",
+    page_icon="chart_with_downwards_trend",
     layout="wide",
 )
 
-st.title("📈 Stock Prediction")
-
+st.title("Stock Prediction")
 col1, col2, col3 = st.columns(3)
+
 with col1:
-    ticker = st.text_input("Enter the Stock Ticker", 'TSLA')
+    ticker=st.text_input("Enter the Stock Ticker", 'TSLA')
+rmse=0
 
-st.subheader(f"Predicting the Close Price over the next 30 days for: {ticker}")
+st.subheader("Predicting the Close Price over the next 30 days for:"+ticker)
 
-@st.cache_data(ttl=3600)
-def load_data(ticker):
-    return get_data(ticker)
+close_price=get_data(ticker)
+rolling_price=get_rolling_mean(close_price)
 
-@st.cache_data(ttl=3600)
-def preprocess(data):
-    rolling = get_rolling_mean(data)
-    d = get_differencing_order(rolling)
-    return rolling, d
-
-@st.cache_resource(ttl=3600)
-def train_once(data_series, d):
-    rmse = evaluate_model(data_series, d)
-    model_fit = fit_model(data_series, d)
-    return rmse, model_fit
-
-# Main logic
-close_price = load_data(ticker)
-rolling_price, differencing_order = preprocess(close_price)
-
-# Convert rolling_price to tuple (required for caching via lru_cache)
-data_tuple = tuple(rolling_price['Close'].values)
-
-rmse, model_fit = train_once(data_tuple, differencing_order)
-forecast_df = get_forecast(model_fit)
+differencing_order = get_differencing_order(rolling_price)
+scaled_data, scaler = scaling(rolling_price)
+rmse = evaluate_model(scaled_data, differencing_order)
 
 st.write("**Model RMSE Score:**", rmse)
 
-st.write("### Forecast Data (Next 30 days)")
-fig_table = plotly_table(forecast_df.round(2))
-fig_table.update_layout(height=220)
-st.plotly_chart(fig_table, use_container_width=True)
+forecast = get_forecast(scaled_data, differencing_order)
 
-# Combine and visualize
-merged = pd.concat([rolling_price, forecast_df])
-st.plotly_chart(
-    Moving_average_forecast(merged.iloc[-60:]),
-    use_container_width=True
-)
+forecast['Close'] = inverse_scaling(scaler, forecast['Close'])
+st.write('### Forecast Data (Next 30 days)')
+fig_tail = plotly_table(forecast.sort_index(ascending=True).round(3))
+fig_tail.update_layout(height=220)
+st.plotly_chart(fig_tail, use_container_width=True)
+
+forecast = pd.concat([rolling_price, forecast])
+
+st.plotly_chart(Moving_average_forecast(forecast.iloc[100:]), use_container_width=True)
+
