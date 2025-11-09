@@ -1,3 +1,4 @@
+python-3.10
 aiohappyeyeballs==2.6.1
 aiohttp==3.12.13
 aiosignal==1.4.0
@@ -93,9 +94,9 @@ opentelemetry-semantic-conventions==0.55b1
 orjson==3.10.18
 overrides==7.7.0
 packaging==24.2
-pandas==2.3.0
-pandas-datareader==0.10.0
-pandas_ta==0.3.14b0
+pandas>=2.0
+pandas-datareader>=0.10.0
+pandas_ta==0.4.71b0
 parso==0.8.4
 patsy==1.0.1
 peewee==3.18.2
